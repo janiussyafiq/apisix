@@ -71,6 +71,7 @@ Each plugin lives in `apisix/plugins/<name>.lua` and implements a subset of phas
 ### Test Framework
 
 Tests in `t/` are `.t` files using Test::Nginx DSL blocks:
+
 - `--- request` / `--- response_headers` / `--- error_code` — HTTP assertions
 - `--- yaml_config` — Override APISIX config for that test
 - `--- error_log` / `--- no_error_log` — Log assertions
@@ -83,12 +84,14 @@ Integration tests require external services (etcd, Redis, Consul, Nacos, Postgre
 ## Code Style
 
 See `CODE_STYLE.md` for Lua conventions. Key points:
+
 - 4-space indentation
 - `local` variables always declared at narrowest scope
 - `ngx.log` for logging (use appropriate log levels)
 - Plugin config validated by JSON Schema before any runtime code runs
 
 ## When analyzing issues
+
 Always read both the plugin file AND its test file.
 Check if the issue mentions a phase — bugs often happen because logic is in the wrong phase.
 Check the plugin's priority if ordering with other plugins is involved.
