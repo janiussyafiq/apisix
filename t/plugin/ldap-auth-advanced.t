@@ -2165,13 +2165,13 @@ rejected
             -- untouched.
             local admin = "-x -H ldap://127.0.0.1:1389 "
                           .. "-D 'cn=amdin,dc=example,dc=org' -w adminpassword"
-            os.execute("docker exec apisix-plugin-openldap-1 ldapdelete " .. admin
+            os.execute("docker exec $(docker ps -qf name=openldap) ldapdelete " .. admin
                        .. " 'cn=Cache User,ou=users,dc=example,dc=org' "
                        .. ">/dev/null 2>&1")
             os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                 .. "dc=org\\nobjectClass: inetOrgPerson\\ncn: Cache User\\nsn: User"
                 .. "\\nuid: cacheuser\\nuserPassword: cachepass\\n' | docker exec -i "
-                .. "apisix-plugin-openldap-1 ldapadd " .. admin .. " >/dev/null 2>&1")
+                .. "$(docker ps -qf name=openldap) ldapadd " .. admin .. " >/dev/null 2>&1")
             ngx.say("created")
         }
     }
@@ -2236,7 +2236,7 @@ passed
             local function set_pw(pw)
                 local ok = os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                     .. "dc=org\\nchangetype: modify\\nreplace: userPassword\\nuserPassword: "
-                    .. pw .. "\\n' | docker exec -i apisix-plugin-openldap-1 ldapmodify "
+                    .. pw .. "\\n' | docker exec -i $(docker ps -qf name=openldap) ldapmodify "
                     .. admin .. " >/dev/null 2>&1")
                 -- Fail loudly if the mutation did not apply: a silently-failing
                 -- ldapmodify leaves the directory unchanged and would let a stale-hit
@@ -2289,7 +2289,7 @@ after_rotation: 401
             local function set_pw(pw)
                 local ok = os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                     .. "dc=org\\nchangetype: modify\\nreplace: userPassword\\nuserPassword: "
-                    .. pw .. "\\n' | docker exec -i apisix-plugin-openldap-1 ldapmodify "
+                    .. pw .. "\\n' | docker exec -i $(docker ps -qf name=openldap) ldapmodify "
                     .. admin .. " >/dev/null 2>&1")
                 -- Fail loudly if the mutation did not apply: a silently-failing
                 -- ldapmodify leaves the directory unchanged and would let a stale-hit
@@ -2339,7 +2339,7 @@ after_rotation: 200
             local function set_pw(pw)
                 local ok = os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                     .. "dc=org\\nchangetype: modify\\nreplace: userPassword\\nuserPassword: "
-                    .. pw .. "\\n' | docker exec -i apisix-plugin-openldap-1 ldapmodify "
+                    .. pw .. "\\n' | docker exec -i $(docker ps -qf name=openldap) ldapmodify "
                     .. admin .. " >/dev/null 2>&1")
                 -- Fail loudly if the mutation did not apply: a silently-failing
                 -- ldapmodify leaves the directory unchanged and would let a stale-hit
@@ -2393,7 +2393,7 @@ after_expiry: 401
             local function set_pw(pw)
                 local ok = os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                     .. "dc=org\\nchangetype: modify\\nreplace: userPassword\\nuserPassword: "
-                    .. pw .. "\\n' | docker exec -i apisix-plugin-openldap-1 ldapmodify "
+                    .. pw .. "\\n' | docker exec -i $(docker ps -qf name=openldap) ldapmodify "
                     .. admin .. " >/dev/null 2>&1")
                 -- Fail loudly if the mutation did not apply: a silently-failing
                 -- ldapmodify leaves the directory unchanged and would let a stale-hit
@@ -2452,7 +2452,7 @@ a_still_hit: 200
             local function set_pw(pw)
                 local ok = os.execute("printf 'dn: cn=Cache User,ou=users,dc=example,"
                     .. "dc=org\\nchangetype: modify\\nreplace: userPassword\\nuserPassword: "
-                    .. pw .. "\\n' | docker exec -i apisix-plugin-openldap-1 ldapmodify "
+                    .. pw .. "\\n' | docker exec -i $(docker ps -qf name=openldap) ldapmodify "
                     .. admin .. " >/dev/null 2>&1")
                 -- Fail loudly if the mutation did not apply: a silently-failing
                 -- ldapmodify leaves the directory unchanged and would let a stale-hit
@@ -2497,7 +2497,7 @@ new_version: 401
         content_by_lua_block {
             local admin = "-x -H ldap://127.0.0.1:1389 "
                           .. "-D 'cn=amdin,dc=example,dc=org' -w adminpassword"
-            os.execute("docker exec apisix-plugin-openldap-1 ldapdelete " .. admin
+            os.execute("docker exec $(docker ps -qf name=openldap) ldapdelete " .. admin
                        .. " 'cn=Cache User,ou=users,dc=example,dc=org' "
                        .. ">/dev/null 2>&1")
             ngx.say("cleaned")
