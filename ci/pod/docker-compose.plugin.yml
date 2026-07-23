@@ -255,6 +255,17 @@ services:
       - "1636:1636"
     volumes:
       - ./t/certs:/certs
+      # Self-contained bootstrap tree (rebuilds stock user01/user02 too, since a
+      # custom /ldifs makes bitnami skip the default LDAP_USERS bootstrap).
+      - ./ci/pod/openldap/ad.ldif:/ldifs/ad.ldif
+      # Fresh-boot hook: enable RFC 4513 unauthenticated bind (bind_anon_dn).
+      - ./ci/pod/openldap/enable-anon-bind.sh:/docker-entrypoint-initdb.d/enable-anon-bind.sh
+      # memberof/refint overlay config + authorization groups, loaded by the
+      # setup-groups.sh hook (NOT /ldifs) so the overlay is active before the
+      # group member links are added and back-populates memberOf on the users.
+      - ./ci/pod/openldap/memberof.ldif:/overlays/memberof.ldif
+      - ./ci/pod/openldap/groups.ldif:/overlays/groups.ldif
+      - ./ci/pod/openldap/setup-groups.sh:/docker-entrypoint-initdb.d/setup-groups.sh
 
 
   ## Grafana Loki

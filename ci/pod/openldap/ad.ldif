@@ -1,0 +1,142 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Bitnami OpenLDAP loads /ldifs only on the first boot of an empty volume, and
+# when /ldifs is non-empty it SKIPS both the default tree and the LDAP_USERS
+# (user01/user02) bootstrap. This fixture is therefore self-contained: it
+# rebuilds the base tree and the stock user01/user02 entries (mirroring the
+# object shape bitnami generates, so the existing ldap-auth regression keeps
+# passing) alongside the ldap-auth-advanced fixtures (jdoe + the dupuser pair).
+
+# Base entry.
+dn: dc=example,dc=org
+objectClass: dcObject
+objectClass: organization
+dc: example
+o: example
+
+# Organizational unit that holds every user entry (the plugin's base_dn).
+dn: ou=users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: users
+
+# Stock user01, binds with password1 (mirrors bitnami LDAP_USERS output).
+dn: cn=user01,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: User1
+cn: user01
+sn: Bar1
+uid: user01
+uidNumber: 1000
+gidNumber: 1000
+homeDirectory: /home/user01
+userPassword: password1
+
+# Stock user02, binds with password2 (mirrors bitnami LDAP_USERS output).
+dn: cn=user02,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: User2
+cn: user02
+sn: Bar2
+uid: user02
+uidNumber: 1001
+gidNumber: 1001
+homeDirectory: /home/user02
+userPassword: password2
+
+# Stock readers group, auto-created by bitnami; kept for parity.
+dn: cn=readers,ou=users,dc=example,dc=org
+objectClass: groupOfNames
+cn: readers
+member: cn=user01,ou=users,dc=example,dc=org
+member: cn=user02,ou=users,dc=example,dc=org
+
+# AD sAMAccountName shape: RDN is cn ("Jane Doe") but the login attribute is
+# uid (jdoe). Exercises search-then-bind where the login value is not the RDN.
+dn: cn=Jane Doe,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Jane Doe
+sn: Doe
+uid: jdoe
+userPassword: janesecret
+
+# Ambiguity pair: two distinct entries share one uid value (dupuser), so a
+# (uid=dupuser) search returns >1 result (the ambiguous-match case).
+dn: cn=Dup User One,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Dup User One
+sn: One
+uid: dupuser
+userPassword: duppass1
+
+dn: cn=Dup User Two,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Dup User Two
+sn: Two
+uid: dupuser
+userPassword: duppass2
+
+# Bind-identity observable for the concurrent bind-state-leak probe
+# (INV-2/INV-3). The enable-anon-bind.sh hook adds an olcAccess rule that hides
+# this one entry from an anonymous search (anonymous keeps only `auth` on its
+# userPassword, so the entry can still be bound once found) while any
+# authenticated identity may read it. A (uid=secretuser) search therefore
+# resolves ONLY when the pinned socket is bound as a real identity, so a route
+# whose step-3 anonymous re-bind leaked a previous end user's bind would find it
+# (and a correct anonymous re-bind would not).
+dn: cn=Secret User,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Secret User
+sn: Secret
+uid: secretuser
+userPassword: secretpass
+
+# Multi-group user (uid multiuser): member of Domain Admins, developers AND ops
+# (three groups, set in groups.ldif). Exercises the UNBOUNDED group search --
+# a size_limit cap of 2 would collect only the first two; all three must return.
+dn: cn=Multi User,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Multi User
+sn: User
+uid: multiuser
+userPassword: multipass
+
+# memberOf DN-unescape observable (INV-13): salesuser is the sole member of the
+# comma-in-cn group "Sales, EMEA" (groups.ldif), whose group DN escapes the
+# comma as cn=Sales\, EMEA,... . The memberOf path must UNESCAPE the first RDN
+# to recover "Sales, EMEA" so it agrees with the SEARCH path's cn value.
+dn: cn=Sales User,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+cn: Sales User
+sn: User
+uid: salesuser
+userPassword: salespass
