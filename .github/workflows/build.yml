@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [master, 'release/**']
+    # 'feat-ldap-auth-advanced-ci' is TEMPORARY (fork-CI only, do NOT upstream):
+    # it lets a plain push of this branch trigger CI so the ldap-auth-advanced
+    # plugin can be validated against the unreleased lua-resty-ldap overlaid below.
+    branches: [master, 'release/**', 'feat-ldap-auth-advanced-ci']
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
@@ -87,6 +90,24 @@ jobs:
       - name: Linux Install
         run: |
           sudo ./ci/${{ matrix.os_name }}_runner.sh do_install
+
+      # TEMPORARY (fork-CI only, do NOT upstream): the ldap-auth-advanced plugin
+      # needs lua-resty-ldap >= 0.3.0 (the pure-Lua search API), which is not yet
+      # released on luarocks -- `make deps` above installs the pinned 0.1.0. Overlay
+      # the unreleased library from api7/lua-resty-ldap#32 into the deps tree so the
+      # plugin loads and its tests can run. Remove once 0.3.0 is on luarocks and the
+      # rockspec is bumped.
+      - name: Overlay unreleased lua-resty-ldap (api7/lua-resty-ldap#32)
+        if: matrix.os_name == 'linux_openresty'
+        run: |
+          git clone --depth=1 https://github.com/api7/lua-resty-ldap.git /tmp/lua-resty-ldap
+          git -C /tmp/lua-resty-ldap fetch --depth=1 origin refs/pull/32/head:pr32
+          git -C /tmp/lua-resty-ldap checkout pr32
+          sudo luarocks remove lua-resty-ldap --tree "$GITHUB_WORKSPACE/deps" --force || true
+          (cd /tmp/lua-resty-ldap && sudo luarocks make rockspec/lua-resty-ldap-0.3.0-0.rockspec --tree "$GITHUB_WORKSPACE/deps" --deps-mode none)
+          test -f "$GITHUB_WORKSPACE/deps/share/lua/5.1/resty/ldap/client.lua" \
+            && echo "overlaid unreleased lua-resty-ldap (resty.ldap.client present)" \
+            || { echo "ERROR: lua-resty-ldap overlay failed"; exit 1; }
 
       - name: Linux launch common services
         run: |
